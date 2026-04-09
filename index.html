@@ -1,0 +1,985 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quiz · Biometria & Privacidade Digital</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&family=Space+Mono:wght@400;700&display=swap"
+        rel="stylesheet">
+    <style>
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        button {
+            font: inherit;
+        }
+
+        :root {
+            --bg: #0b0f19;
+            --surface: #131827;
+            --border: #1e2d45;
+            --accent: #00e5c3;
+            --accent-dim: rgba(0, 229, 195, 0.12);
+            --accent-glow: rgba(0, 229, 195, 0.3);
+            --wrong: #ff4d6d;
+            --wrong-dim: rgba(255, 77, 109, 0.12);
+            --text: #e8eef7;
+            --text-muted: #6b7f99;
+            --gold: #f5c542;
+            --gold-dim: rgba(245, 197, 66, 0.15);
+            --radius: 14px;
+        }
+
+        html,
+        body {
+            height: 100%;
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'DM Sans', sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100dvh;
+            padding: 0;
+            overflow-x: hidden;
+        }
+
+        /* Background grid */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(0, 229, 195, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 229, 195, 0.03) 1px, transparent 1px);
+            background-size: 40px 40px;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        body::after {
+            content: '';
+            position: fixed;
+            top: -200px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 600px;
+            height: 400px;
+            background: radial-gradient(ellipse at center, rgba(0, 229, 195, 0.07) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* ── SCREENS ── */
+        .screen {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            max-width: 480px;
+            min-height: 100dvh;
+            padding: 28px 20px 40px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .screen.active {
+            display: flex;
+            animation: fadeUp 0.4s ease both;
+        }
+
+        @keyframes fadeUp {
+            from {
+                opacity: 0;
+                transform: translateY(18px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* ── PROGRESS ── */
+        .progress-wrap {
+            width: 100%;
+            margin-bottom: 28px;
+        }
+
+        .progress-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .q-counter {
+            font-family: 'Space Mono', monospace;
+            font-size: 11px;
+            color: var(--accent);
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+        }
+
+        .q-fraction {
+            font-family: 'Space Mono', monospace;
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 3px;
+            background: var(--border);
+            border-radius: 99px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--accent);
+            border-radius: 99px;
+            transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 0 8px var(--accent-glow);
+        }
+
+        /* ── QUESTION CARD ── */
+        .q-card {
+            width: 100%;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 24px 20px 20px;
+            margin-bottom: 16px;
+        }
+
+        .q-number {
+            font-family: 'Space Mono', monospace;
+            font-size: 10px;
+            color: var(--accent);
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            margin-bottom: 12px;
+        }
+
+        .q-text {
+            font-family: 'DM Sans', sans-serif;
+            font-size: 16px;
+            font-weight: 500;
+            line-height: 1.55;
+            color: var(--text);
+        }
+
+        /* ── OPTIONS ── */
+        .options-list {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .option-btn {
+            width: 100%;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 14px 16px;
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            cursor: pointer;
+            transition: border-color 0.2s, background 0.2s, transform 0.1s;
+            text-align: left;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .option-btn:focus-visible {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-dim);
+            outline: none;
+        }
+
+        .option-btn:active {
+            transform: scale(0.98);
+        }
+
+        .option-btn.selected {
+            border-color: var(--accent);
+            background: var(--accent-dim);
+        }
+
+        .option-btn.correct {
+            border-color: var(--accent);
+            background: var(--accent-dim);
+        }
+
+        .option-btn.wrong {
+            border-color: var(--wrong);
+            background: var(--wrong-dim);
+        }
+
+        .option-btn[disabled] {
+            cursor: default;
+        }
+
+        .option-btn.is-inactive {
+            opacity: 0.5;
+            filter: brightness(0.85);
+        }
+
+        .option-letter {
+            font-family: 'Space Mono', monospace;
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--text-muted);
+            min-width: 20px;
+            padding-top: 1px;
+            transition: color 0.2s;
+        }
+
+        .option-btn.selected .option-letter {
+            color: var(--accent);
+        }
+
+        .option-btn.correct .option-letter {
+            color: var(--accent);
+        }
+
+        .option-btn.wrong .option-letter {
+            color: var(--wrong);
+        }
+
+        .option-text {
+            font-size: 14px;
+            font-weight: 400;
+            line-height: 1.5;
+            color: var(--text);
+        }
+
+        /* ── CONFIRM BUTTON ── */
+        .btn-confirm {
+            width: 100%;
+            padding: 16px;
+            background: var(--accent);
+            color: #061010;
+            font-family: 'Syne', sans-serif;
+            font-size: 15px;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            border: none;
+            border-radius: var(--radius);
+            cursor: pointer;
+            transition: opacity 0.2s, transform 0.1s, box-shadow 0.2s;
+            box-shadow: 0 4px 24px var(--accent-glow);
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .btn-confirm:active {
+            transform: scale(0.97);
+        }
+
+        .btn-confirm:focus-visible,
+        .btn-start:focus-visible,
+        .btn-retry:focus-visible {
+            outline: 2px solid var(--accent);
+            outline-offset: 3px;
+        }
+
+        .btn-confirm:disabled {
+            opacity: 0.25;
+            cursor: default;
+            box-shadow: none;
+        }
+
+        /* ── START SCREEN ── */
+        #screen-start {
+            justify-content: center;
+            gap: 0;
+        }
+
+        .start-badge {
+            font-family: 'Space Mono', monospace;
+            font-size: 10px;
+            letter-spacing: 0.18em;
+            color: var(--accent);
+            text-transform: uppercase;
+            border: 1px solid var(--border);
+            border-radius: 99px;
+            padding: 5px 14px;
+            margin-bottom: 28px;
+            display: inline-block;
+        }
+
+        .start-title {
+            font-family: 'Syne', sans-serif;
+            font-size: clamp(28px, 8vw, 40px);
+            font-weight: 800;
+            line-height: 1.1;
+            text-align: center;
+            margin-bottom: 14px;
+            background: linear-gradient(135deg, #e8eef7 30%, var(--accent) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .start-sub {
+            font-size: 14px;
+            color: var(--text-muted);
+            text-align: center;
+            line-height: 1.6;
+            margin-bottom: 44px;
+            max-width: 300px;
+        }
+
+        .start-info {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 36px;
+            width: 100%;
+        }
+
+        .info-chip {
+            flex: 1;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 12px;
+            text-align: center;
+        }
+
+        .info-chip-num {
+            font-family: 'Space Mono', monospace;
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--accent);
+            display: block;
+        }
+
+        .info-chip-label {
+            font-size: 11px;
+            color: var(--text-muted);
+            display: block;
+            margin-top: 2px;
+        }
+
+        .btn-start {
+            width: 100%;
+            padding: 18px;
+            background: var(--accent);
+            color: #061010;
+            font-family: 'Syne', sans-serif;
+            font-size: 16px;
+            font-weight: 800;
+            letter-spacing: 0.06em;
+            border: none;
+            border-radius: var(--radius);
+            cursor: pointer;
+            box-shadow: 0 6px 30px var(--accent-glow);
+            transition: transform 0.15s, box-shadow 0.15s;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .btn-start:active {
+            transform: scale(0.97);
+        }
+
+        /* ── RESULT SCREEN ── */
+        #screen-result {
+            justify-content: center;
+            text-align: center;
+        }
+
+        .result-icon {
+            font-size: 56px;
+            margin-bottom: 20px;
+            animation: pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+        }
+
+        @keyframes pop {
+            from {
+                transform: scale(0.4);
+                opacity: 0;
+            }
+
+            to {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        .result-label {
+            font-family: 'Space Mono', monospace;
+            font-size: 10px;
+            letter-spacing: 0.2em;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            margin-bottom: 12px;
+        }
+
+        .result-score {
+            font-family: 'Syne', sans-serif;
+            font-size: clamp(52px, 18vw, 80px);
+            font-weight: 800;
+            line-height: 1;
+            margin-bottom: 6px;
+        }
+
+        .result-score.perfect {
+            background: linear-gradient(135deg, var(--gold), #ffea88, var(--gold));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            filter: drop-shadow(0 0 20px rgba(245, 197, 66, 0.4));
+        }
+
+        .result-score.good {
+            background: linear-gradient(135deg, var(--accent), #88fff2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .result-score.regular {
+            color: var(--text);
+        }
+
+        .result-total {
+            font-size: 14px;
+            color: var(--text-muted);
+            margin-bottom: 20px;
+        }
+
+        .result-msg {
+            font-size: 15px;
+            line-height: 1.6;
+            color: var(--text-muted);
+            max-width: 300px;
+            margin: 0 auto 40px;
+        }
+
+        .result-msg strong {
+            color: var(--text);
+            font-weight: 500;
+        }
+
+        .perfect-banner {
+            background: var(--gold-dim);
+            border: 1px solid rgba(245, 197, 66, 0.3);
+            border-radius: var(--radius);
+            padding: 18px 20px;
+            margin-bottom: 28px;
+            width: 100%;
+        }
+
+        .perfect-banner h3 {
+            font-family: 'Syne', sans-serif;
+            font-size: 17px;
+            font-weight: 800;
+            color: var(--gold);
+            margin-bottom: 6px;
+        }
+
+        .perfect-banner p {
+            font-size: 13px;
+            color: rgba(245, 197, 66, 0.7);
+            line-height: 1.5;
+        }
+
+        .btn-retry {
+            width: 100%;
+            padding: 16px;
+            background: transparent;
+            color: var(--text);
+            font-family: 'Syne', sans-serif;
+            font-size: 15px;
+            font-weight: 700;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            cursor: pointer;
+            transition: border-color 0.2s, background 0.2s;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .btn-retry:active {
+            background: var(--surface);
+        }
+
+        /* ── FEEDBACK TOAST ── */
+        .feedback {
+            width: 100%;
+            padding: 12px 16px;
+            border-radius: 10px;
+            font-size: 13px;
+            line-height: 1.5;
+            margin-bottom: 16px;
+            display: none;
+            animation: fadeUp 0.25s ease both;
+        }
+
+        .feedback.correct-fb {
+            background: var(--accent-dim);
+            border: 1px solid rgba(0, 229, 195, 0.3);
+            color: var(--accent);
+        }
+
+        .feedback.wrong-fb {
+            background: var(--wrong-dim);
+            border: 1px solid rgba(255, 77, 109, 0.3);
+            color: var(--wrong);
+        }
+
+        /* shimmer dots on start */
+        .dots {
+            position: absolute;
+            top: 60px;
+            right: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            opacity: 0.25;
+        }
+
+        .dots span {
+            display: block;
+            width: 4px;
+            height: 4px;
+            background: var(--accent);
+            border-radius: 50%;
+            animation: blink 2s ease-in-out infinite;
+        }
+
+        .dots span:nth-child(2) {
+            animation-delay: 0.4s;
+        }
+
+        .dots span:nth-child(3) {
+            animation-delay: 0.8s;
+        }
+
+        @keyframes blink {
+
+            0%,
+            100% {
+                opacity: 0.3;
+            }
+
+            50% {
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- START SCREEN -->
+    <div class="screen active" id="screen-start">
+        <div class="dots"><span></span><span></span><span></span></div>
+        <span class="start-badge">Quiz Interativo</span>
+        <h1 class="start-title">Biometria &amp; Privacidade Digital</h1>
+        <p class="start-sub">Teste seus conhecimentos sobre segurança de dados, biometria e direitos na era digital.</p>
+        <div class="start-info">
+            <div class="info-chip">
+                <span class="info-chip-num" id="info-total-questions">10</span>
+                <span class="info-chip-label">Questões</span>
+            </div>
+            <div class="info-chip">
+                <span class="info-chip-num" id="info-total-options">4</span>
+                <span class="info-chip-label">Alternativas</span>
+            </div>
+            <div class="info-chip">
+                <span class="info-chip-num">1×</span>
+                <span class="info-chip-label">Tentativa</span>
+            </div>
+        </div>
+        <button class="btn-start" id="btn-start" type="button" onclick="startQuiz()">Iniciar Quiz →</button>
+    </div>
+
+    <!-- QUIZ SCREEN -->
+    <div class="screen" id="screen-quiz">
+        <div class="progress-wrap">
+            <div class="progress-meta">
+                <span class="q-counter" id="q-counter">Questão 1</span>
+                <span class="q-fraction" id="q-fraction">1 / 10</span>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progress-fill" style="width:0%"></div>
+            </div>
+        </div>
+
+        <div class="q-card">
+            <div class="q-number" id="q-number">Q01</div>
+            <h2 class="q-text" id="q-text" tabindex="-1"></h2>
+        </div>
+
+        <div class="options-list" id="options-list" role="list" aria-label="Alternativas da pergunta"></div>
+
+        <div class="feedback" id="feedback" hidden aria-live="polite"></div>
+
+        <button class="btn-confirm" id="btn-confirm" type="button" disabled>Confirmar</button>
+    </div>
+
+    <!-- RESULT SCREEN -->
+    <div class="screen" id="screen-result">
+        <div class="result-icon" id="result-icon">🎯</div>
+        <div class="result-label">Sua pontuação</div>
+        <div class="result-score" id="result-score">0</div>
+        <div class="result-total" id="result-total">de 10 questões</div>
+        <div class="perfect-banner" id="perfect-banner" style="display:none">
+            <h3>🏆 Gabarito Perfeito!</h3>
+            <p>Você acertou todas as questões. Parabéns — você domina o tema de biometria e privacidade digital!</p>
+        </div>
+        <p class="result-msg" id="result-msg" aria-live="polite"></p>
+        <button class="btn-retry" id="btn-retry" type="button" onclick="restartQuiz()">↩ Tentar novamente</button>
+    </div>
+
+    <script>
+        const questions = [
+            {
+                text: "O que é um exemplo comum de dado biométrico usado no nosso dia a dia?",
+                options: [
+                    "Uma senha forte de 8 caracteres.",
+                    "A impressão digital para desbloquear a tela do celular.",
+                    "O número do CPF e do RG.",
+                    "O código PIN (senha numérica) do cartão de crédito."
+                ],
+                answer: 1
+            },
+            {
+                text: "Qual é a atitude mais segura ao receber um link de 'promoção imperdível' de um número desconhecido no WhatsApp?",
+                options: [
+                    "Clicar imediatamente para não perder a oferta.",
+                    "Encaminhar para a família para que todos aproveitem.",
+                    "Ignorar a mensagem, não clicar em nada e bloquear o contato.",
+                    "Preencher seus dados básicos no site apenas para ver se é verdade."
+                ],
+                answer: 2
+            },
+            {
+                text: "Qual é a principal função da Autenticação de Dois Fatores (2FA)?",
+                options: [
+                    "Deixar a conexão de internet do celular mais rápida.",
+                    "Criar uma segunda barreira de segurança além da senha (como um código no SMS ou app).",
+                    "Substituir completamente o uso de programas antivírus.",
+                    "Apagar vírus e malwares automaticamente do computador."
+                ],
+                answer: 1
+            },
+            {
+                text: "O que significa, na prática, ter 'privacidade de dados' na internet?",
+                options: [
+                    "Ter controle sobre quais informações suas são coletadas e como as empresas as utilizam.",
+                    "Postar todas as suas fotos em modo público para que todos vejam.",
+                    "Compartilhar suas senhas apenas com amigos próximos e familiares.",
+                    "Usar a mesma senha para todas as suas redes sociais para não esquecer."
+                ],
+                answer: 0
+            },
+            {
+                text: "Por que o vazamento de dados biométricos (como o mapeamento do seu rosto) é considerado muito mais grave do que o vazamento de uma senha comum?",
+                options: [
+                    "Porque dados biométricos deixam o celular mais pesado e lento.",
+                    "Porque senhas podem ser alteradas a qualquer momento, mas você não pode trocar seu rosto ou sua impressão digital.",
+                    "Porque a biometria é um sistema muito antigo e fácil de ser quebrado por qualquer pessoa.",
+                    "Porque os hackers preferem vender senhas comuns no mercado negro."
+                ],
+                answer: 1
+            },
+            {
+                text: "O que é a técnica conhecida como 'Phishing' no mundo da segurança digital?",
+                options: [
+                    "Um tipo de antivírus muito moderno e eficiente.",
+                    "Uma técnica de engano onde criminosos se passam por empresas ou pessoas confiáveis para roubar seus dados.",
+                    "Um método utilizado para acelerar downloads e uploads na internet.",
+                    "Um programa de computador usado exclusivamente para bloquear anúncios chatos."
+                ],
+                answer: 1
+            },
+            {
+                text: "Qual é um dos principais riscos do uso de reconhecimento facial em massa (câmeras nas ruas) para a dignidade humana e os direitos civis?",
+                options: [
+                    "O aumento significativo da conta de energia elétrica das prefeituras.",
+                    "O risco de preconceito algorítmico, falsos positivos (acusar um inocente) e excesso de vigilância.",
+                    "A lentidão que isso causa no trânsito das grandes cidades.",
+                    "A obrigatoriedade de substituir todos os documentos de papel."
+                ],
+                answer: 1
+            },
+            {
+                text: "Qual é o perigo oculto de usar redes Wi-Fi públicas (sem senha) em shoppings ou aeroportos para acessar o aplicativo do seu banco?",
+                options: [
+                    "O banco pode bloquear seu aplicativo por detectar que você está fora de casa.",
+                    "A internet pública costuma ser muito lenta e a sua transferência via PIX vai falhar.",
+                    "Redes abertas não têm criptografia forte e podem ser interceptadas por cibercriminosos na mesma rede.",
+                    "Você gasta a vida útil da bateria do seu smartphone muito mais rápido."
+                ],
+                answer: 2
+            },
+            {
+                text: "No contexto de leis de privacidade, como a Lei Geral de Proteção de Dados (LGPD) no Brasil, como os dados biométricos são classificados e qual a principal exigência para o seu tratamento por empresas?",
+                options: [
+                    "São 'Dados Públicos', podendo ser coletados e vendidos livremente por qualquer empresa de tecnologia.",
+                    "São 'Dados Sensíveis', exigindo, via de regra, o consentimento explícito, específico e destacado do titular para serem usados.",
+                    "São 'Dados Anonimizados', que não requerem nenhum tipo de permissão do usuário para processamento.",
+                    "São 'Dados Temporários', que a lei obriga as empresas a apagarem em um prazo máximo de 24 horas."
+                ],
+                answer: 1
+            },
+            {
+                text: "Como a tecnologia de 'Deepfake' representa uma ameaça direta à segurança baseada em biometria e à confiança na sociedade digital?",
+                options: [
+                    "Deepfakes sobrecarregam os servidores de internet, impedindo o envio e recebimento de dados biométricos reais.",
+                    "Utilizam Inteligência Artificial para clonar com precisão voz, rosto e maneirismos, burlando sistemas de verificação biométrica e viabilizando fraudes de identidade sofisticadas.",
+                    "Deepfakes são apenas filtros estéticos de redes sociais e, portanto, não apresentam capacidade técnica para burlar a segurança da informação.",
+                    "Deepfakes criptografam os dados biométricos das vítimas de forma irreversível, gerando a perda total do acesso às próprias contas bancárias."
+                ],
+                answer: 1
+            }
+        ];
+
+        const letters = ['A', 'B', 'C', 'D'];
+        const ui = {
+            startButton: document.getElementById('btn-start'),
+            retryButton: document.getElementById('btn-retry'),
+            totalQuestions: document.getElementById('info-total-questions'),
+            totalOptions: document.getElementById('info-total-options'),
+            qCounter: document.getElementById('q-counter'),
+            qFraction: document.getElementById('q-fraction'),
+            qNumber: document.getElementById('q-number'),
+            qText: document.getElementById('q-text'),
+            progressFill: document.getElementById('progress-fill'),
+            optionsList: document.getElementById('options-list'),
+            feedback: document.getElementById('feedback'),
+            confirmButton: document.getElementById('btn-confirm'),
+            score: document.getElementById('result-score'),
+            message: document.getElementById('result-msg'),
+            icon: document.getElementById('result-icon'),
+            banner: document.getElementById('perfect-banner'),
+            total: document.getElementById('result-total')
+        };
+
+        let current = 0;
+        let score = 0;
+        let selected = null;
+        let confirmed = false;
+
+        function focusElement(element) {
+            if (!element) return;
+            requestAnimationFrame(() => element.focus());
+        }
+
+        function setIntroStats() {
+            const maxOptions = questions.reduce((total, question) => Math.max(total, question.options.length), 0);
+            ui.totalQuestions.textContent = questions.length;
+            ui.totalOptions.textContent = maxOptions;
+            ui.qFraction.textContent = `1 / ${questions.length}`;
+            ui.total.textContent = `de ${questions.length} questões`;
+        }
+
+        function startQuiz() {
+            showScreen('screen-quiz');
+            renderQuestion();
+        }
+
+        function showScreen(id) {
+            document.querySelectorAll('.screen').forEach(screen => {
+                const isActive = screen.id === id;
+                screen.classList.toggle('active', isActive);
+                screen.setAttribute('aria-hidden', String(!isActive));
+            });
+
+            if (id === 'screen-start') {
+                focusElement(ui.startButton);
+            } else if (id === 'screen-result') {
+                focusElement(ui.retryButton);
+            }
+        }
+
+        function handleOptionKeydown(event) {
+            if (!['ArrowDown', 'ArrowRight', 'ArrowUp', 'ArrowLeft'].includes(event.key)) {
+                return;
+            }
+
+            const buttons = [...document.querySelectorAll('.option-btn')];
+            const currentIndex = buttons.indexOf(event.currentTarget);
+            if (currentIndex === -1) return;
+
+            const nextIndex = ['ArrowDown', 'ArrowRight'].includes(event.key)
+                ? (currentIndex + 1) % buttons.length
+                : (currentIndex - 1 + buttons.length) % buttons.length;
+
+            event.preventDefault();
+            selectOption(nextIndex, true);
+        }
+
+        function renderQuestion() {
+            const q = questions[current];
+            selected = null;
+            confirmed = false;
+
+            ui.qCounter.textContent = `Questão ${current + 1}`;
+            ui.qFraction.textContent = `${current + 1} / ${questions.length}`;
+            ui.qNumber.textContent = `Q${String(current + 1).padStart(2, '0')}`;
+            ui.qText.textContent = q.text;
+
+            const pct = ((current + 1) / questions.length) * 100;
+            ui.progressFill.style.width = pct + '%';
+
+            ui.optionsList.innerHTML = '';
+
+            q.options.forEach((opt, i) => {
+                const btn = document.createElement('button');
+                btn.className = 'option-btn';
+                btn.type = 'button';
+                btn.setAttribute('aria-pressed', 'false');
+                btn.setAttribute('aria-label', `Alternativa ${letters[i]}: ${opt}`);
+                btn.onclick = () => selectOption(i);
+                btn.addEventListener('keydown', handleOptionKeydown);
+
+                const letter = document.createElement('span');
+                letter.className = 'option-letter';
+                letter.textContent = letters[i];
+
+                const text = document.createElement('span');
+                text.className = 'option-text';
+                text.textContent = opt;
+
+                btn.append(letter, text);
+                ui.optionsList.appendChild(btn);
+            });
+
+            ui.feedback.hidden = true;
+            ui.feedback.className = 'feedback';
+            ui.feedback.textContent = '';
+
+            ui.confirmButton.disabled = true;
+            ui.confirmButton.textContent = 'Confirmar';
+            ui.confirmButton.onclick = confirmAnswer;
+
+            focusElement(ui.qText);
+        }
+
+        function selectOption(index, shouldFocus = false) {
+            if (confirmed) return;
+            selected = index;
+            document.querySelectorAll('.option-btn').forEach((btn, i) => {
+                const isSelected = i === index;
+                btn.classList.toggle('selected', isSelected);
+                btn.setAttribute('aria-pressed', String(isSelected));
+
+                if (shouldFocus && isSelected) {
+                    btn.focus();
+                }
+            });
+            ui.confirmButton.disabled = false;
+        }
+
+        function confirmAnswer() {
+            if (selected === null || confirmed) return;
+            confirmed = true;
+
+            const q = questions[current];
+            const correct = q.answer;
+            const btns = document.querySelectorAll('.option-btn');
+
+            btns.forEach((btn, i) => {
+                btn.disabled = true;
+                btn.classList.remove('selected');
+                btn.setAttribute('aria-pressed', 'false');
+                if (i === correct) {
+                    btn.classList.add('correct');
+                } else if (i === selected && selected !== correct) {
+                    btn.classList.add('wrong');
+                } else {
+                    btn.classList.add('is-inactive');
+                }
+            });
+
+            if (selected === correct) {
+                score++;
+                ui.feedback.className = 'feedback correct-fb';
+                ui.feedback.textContent = '✓ Correto!';
+            } else {
+                ui.feedback.className = 'feedback wrong-fb';
+                ui.feedback.textContent = `✗ Incorreto. A resposta certa era a alternativa ${letters[correct]}.`;
+            }
+            ui.feedback.hidden = false;
+
+            ui.confirmButton.textContent = current < questions.length - 1 ? 'Próxima →' : 'Ver Resultado';
+            ui.confirmButton.disabled = false;
+            ui.confirmButton.onclick = nextStep;
+            focusElement(ui.confirmButton);
+        }
+
+        function nextStep() {
+            current++;
+            if (current < questions.length) {
+                showScreen('screen-quiz');
+                renderQuestion();
+            } else {
+                showResult();
+            }
+        }
+
+        function showResult() {
+            showScreen('screen-result');
+
+            ui.score.textContent = score;
+            ui.total.textContent = `de ${questions.length} questões`;
+
+            if (score === questions.length) {
+                ui.score.className = 'result-score perfect';
+                ui.icon.textContent = '🏆';
+                ui.banner.style.display = 'block';
+                ui.message.innerHTML = '';
+            } else if (score >= 7) {
+                ui.score.className = 'result-score good';
+                ui.icon.textContent = '🎯';
+                ui.banner.style.display = 'none';
+                ui.message.innerHTML = `<strong>Ótimo desempenho!</strong> Você tem um bom domínio sobre biometria e privacidade digital.`;
+            } else if (score >= 4) {
+                ui.score.className = 'result-score regular';
+                ui.icon.textContent = '🧠';
+                ui.banner.style.display = 'none';
+                ui.message.innerHTML = `<strong>Bom começo!</strong> Vale a pena revisitar o tema de proteção de dados e segurança digital.`;
+            } else {
+                ui.score.className = 'result-score regular';
+                ui.icon.textContent = '📚';
+                ui.banner.style.display = 'none';
+                ui.message.innerHTML = `<strong>Continue aprendendo!</strong> O tema de biometria e privacidade é essencial nos dias de hoje.`;
+            }
+        }
+
+        function restartQuiz() {
+            current = 0;
+            score = 0;
+            selected = null;
+            confirmed = false;
+            ui.score.className = 'result-score';
+            ui.score.textContent = '0';
+            ui.icon.textContent = '🎯';
+            ui.banner.style.display = 'none';
+            ui.message.textContent = '';
+            showScreen('screen-start');
+        }
+
+        setIntroStats();
+        showScreen('screen-start');
+    </script>
+</body>
+
+</html>
